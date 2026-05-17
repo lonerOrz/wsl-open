@@ -1,8 +1,15 @@
+use clap::Parser;
 use std::{
     env,
     path::Path,
     process::{Command, Stdio},
 };
+
+#[derive(Parser)]
+#[command(about = "Open URLs, domains and files with Windows default apps from WSL", version, long_about = None)]
+struct Cli {
+    targets: Vec<String>,
+}
 
 #[derive(Debug)]
 enum LogLevel {
@@ -27,7 +34,6 @@ fn expand_home(s: &str) -> String {
     s.to_string()
 }
 
-/// 仅识别协议
 fn is_url(s: &str) -> bool {
     s.contains("://")
 }
@@ -39,7 +45,6 @@ fn looks_like_domain(s: &str) -> bool {
         && (s.contains('.') || s.eq_ignore_ascii_case("localhost"))
 }
 
-/// wslpath 转 Windows 路径
 fn wslpath_win(path: &str) -> Option<String> {
     let out = Command::new("wslpath")
         .args(["-w", "--", path])
@@ -56,8 +61,6 @@ fn to_windows_path(p: &str) -> String {
     wslpath_win(&p).unwrap_or(p)
 }
 
-/// 使用 cmd start 打开目标
-/// 注意：UNC 路径会产生 Windows 警告（已通过 stderr 静音）
 fn open_with_windows_shell(target: &str) {
     log(LogLevel::Info, &format!("open: {target}"));
 
@@ -89,9 +92,9 @@ fn dispatch(input: &str) {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let cli = Cli::parse();
 
-    if args.len() < 2 {
+    if cli.targets.is_empty() {
         if let Ok(cwd) = env::current_dir() {
             if let Some(p) = cwd.to_str() {
                 dispatch(p);
@@ -100,7 +103,7 @@ fn main() {
         return;
     }
 
-    for a in &args[1..] {
-        dispatch(a);
+    for target in cli.targets {
+        dispatch(&target);
     }
 }

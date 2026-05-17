@@ -6,3 +6,4 @@ description = "Open files in Windows GUI applications from WSL command line"
 license = "MIT"
 
 [dependencies]
+clap = { version = "4.0", features = ["derive"] }
