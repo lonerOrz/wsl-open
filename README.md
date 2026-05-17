@@ -1,32 +1,37 @@
 # wsl-open
 
-A minimal WSL utility to open files, URLs, and domains using Windows default applications via `cmd.exe start`.
+A simple utility to open files, URLs, and domains from WSL using the Windows default application.
 
 ## Features
 
-- Open HTTP/HTTPS URLs
-- Open domain names (auto-prepend `https://`)
-- Open local files and directories from WSL
-- Convert WSL paths to Windows paths via `wslpath`
-- Supports `~/` expansion
+- Open web URLs
+- Open domain names (e.g. example.com)
+- Open local files and directories
+- Supports paths inside WSL
+- Supports `~/` home directory expansion
+
+## Usage
+
+```bash
+wsl-open https://github.com
+wsl-open example.com
+wsl-open ./src/main.rs
+wsl-open ~/Pictures/image.png
+```
 
 ## Behavior
 
-Input is resolved in the following order:
+Input will automatically be handled based on its type:
 
-1. URL (`http://` or `https://`)
-2. Domain (`example.com`, `localhost`, `localhost:3000`)
-3. Local path (if exists)
-4. Error (unsupported input)
+- URL → opened in default browser
+- Domain → treated as HTTPS URL
+- File or directory → opened in Windows default application
 
 ## Requirements
 
-- WSL (tested on WSL2)
-- Windows `cmd.exe`
-- `wslpath` available in PATH
+- WSL environment
+- Windows system integration
 
-## Build
+## License
 
-```bash
-cargo build --release
-```
+MIT
