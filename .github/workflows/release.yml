@@ -37,7 +37,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build Linux release
         run: cargo build --release
-      - name: Rename binary
+      - name: Prepare binary
         run: mv target/release/wsl-open wsl-open-linux-x86_64
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -54,13 +54,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: wsl-open-linux
+          path: ./
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ inputs.tag }}"
-          gh release create "$TAG" artifacts/* --title "$TAG" --notes "WSL Open - Linux x86_64 binary"
+          gh release create "$TAG" wsl-open-linux-x86_64 --title "$TAG" --notes "WSL Open - Linux x86_64 binary"
 
   cleanup:
     needs: [validate, build, release]
