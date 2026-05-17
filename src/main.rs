@@ -2,6 +2,15 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 
+fn expand_home(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Ok(home) = env::var("HOME") {
+            return format!("{}/{}", home, rest);
+        }
+    }
+    path.to_string()
+}
+
 fn is_url(s: &str) -> bool {
     s.contains("://")
 }
@@ -15,6 +24,7 @@ fn wslpath_w(path: &str) -> Option<String> {
         .args(["-w", "--", path])
         .output()
         .ok()?;
+
     if output.status.success() {
         Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
@@ -24,6 +34,7 @@ fn wslpath_w(path: &str) -> Option<String> {
 
 fn wslpath_u(path: &str) -> Option<String> {
     let output = Command::new("wslpath").args(["-u", path]).output().ok()?;
+
     if output.status.success() {
         Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
@@ -52,9 +63,13 @@ fn linux_to_win(path: &str) -> Option<String> {
 }
 
 fn resolve_windows_path(path: &str) -> Option<String> {
-    wslpath_w(path)
-        .or_else(|| linux_to_win(path))
-        .or_else(|| Some(path.to_string()))
+    wslpath_w(path).or_else(|| linux_to_win(path)).or_else(|| {
+        if Path::new(path).exists() {
+            Some(path.to_string())
+        } else {
+            None
+        }
+    })
 }
 
 fn copy_to_windows_temp(path: &str) -> Option<String> {
@@ -67,7 +82,6 @@ fn copy_to_windows_temp(path: &str) -> Option<String> {
         .ok()?;
 
     let win_temp = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
     let linux_temp = wslpath_u(&win_temp).unwrap_or_else(|| "/tmp".to_string());
 
     let dest_dir = format!("{}/wsl-open", linux_temp.trim_end_matches('/'));
@@ -79,16 +93,10 @@ fn copy_to_windows_temp(path: &str) -> Option<String> {
     resolve_windows_path(&dest)
 }
 
-fn open_in_windows(target: &str, is_url: bool) {
-    if is_url {
-        let _ = Command::new("cmd.exe")
-            .args(["/c", "start", "", target])
-            .status();
-    } else {
-        let _ = Command::new("cmd.exe")
-            .args(["/c", "start", "", target])
-            .status();
-    }
+fn open_in_windows(target: &str, _is_url: bool) {
+    let _ = Command::new("cmd.exe")
+        .args(["/c", "start", "", target])
+        .status();
 }
 
 fn is_unc_path(p: &str) -> bool {
@@ -96,18 +104,22 @@ fn is_unc_path(p: &str) -> bool {
 }
 
 fn open_path(path: &str) {
-    let win = resolve_windows_path(path);
+    let path = expand_home(path);
+
+    let win = resolve_windows_path(&path);
 
     match win {
-        Some(p) if is_unc_path(&p) => match copy_to_windows_temp(path) {
+        Some(p) if is_unc_path(&p) => match copy_to_windows_temp(&path) {
             Some(copy) => open_in_windows(&copy, false),
             None => open_in_windows(&p, false),
         },
         Some(p) => open_in_windows(&p, false),
-        None if Path::new(path).is_dir() => {
+
+        None if Path::new(&path).is_dir() => {
             eprintln!("wsl-open: cannot open directory outside Windows partition: {path}");
         }
-        None => match copy_to_windows_temp(path) {
+
+        None => match copy_to_windows_temp(&path) {
             Some(p) => open_in_windows(&p, false),
             None => eprintln!("wsl-open: failed to open: {path}"),
         },
