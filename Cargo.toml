@@ -1,8 +1,8 @@
 [package]
 name = "wsl-open"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
-description = "Open files in Windows GUI applications from WSL command line"
+description = "Low-level utility to open anything from WSL in Windows"
 license = "MIT"
 
 [dependencies]
